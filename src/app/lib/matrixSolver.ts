@@ -10,6 +10,7 @@ export type Solution = {
   solution?: number[] | string[];
   pivotVars?: number[];
   freeVars?: number[];
+  isHomogeneous?: boolean; // Nueva propiedad para sistemas homogéneos
   steps: Step[];
   explanation: string;
 };
@@ -19,6 +20,7 @@ export class EnhancedSolver {
   private augmented: number[][];
   private precision: number;
   private epsilon: number;
+  private isHomogeneous: boolean = true; // Asumimos que es homogéneo hasta comprobar lo contrario
 
   constructor(matrix: Matrix, vector: number[]) {
     // Validación básica de entrada
@@ -29,6 +31,9 @@ export class EnhancedSolver {
     this.augmented = matrix.map((row, i) => [...row, vector[i]]);
     this.precision = 4;
     this.epsilon = 1e-10;
+    
+    // Comprobamos si es un sistema homogéneo (todos los términos independientes son cero)
+    this.isHomogeneous = vector.every(val => this.isZero(val));
   }
 
   private round(value: number): number {
@@ -151,6 +156,7 @@ export class EnhancedSolver {
     if (matrixRank < augmentedRank) {
       return {
         type: "no-solution",
+        isHomogeneous: this.isHomogeneous,
         steps: this.steps,
         explanation,
       };
@@ -166,6 +172,7 @@ export class EnhancedSolver {
 
     return {
       type: "singular",
+      isHomogeneous: this.isHomogeneous,
       steps: this.steps,
       explanation: "Matriz de coeficientes singular (no invertible)",
     };
@@ -182,6 +189,13 @@ export class EnhancedSolver {
     let explanation = `Sistema de ${equations} ecuaciones con ${variables} variables\n`;
     explanation += `- Rango matriz coeficientes: ${matrixRank}\n`;
     explanation += `- Rango matriz aumentada: ${augmentedRank}\n`;
+    
+    // Agregar información sobre si el sistema es homogéneo
+    if (this.isHomogeneous) {
+      explanation += `- Sistema HOMOGÉNEO (todos los términos independientes son cero)\n`;
+    } else {
+      explanation += `- Sistema NO HOMOGÉNEO\n`;
+    }
 
     if (matrixRank < augmentedRank) {
       explanation += "\n→ Sistema INCOMPATIBLE (sin solución)\n";
@@ -189,11 +203,18 @@ export class EnhancedSolver {
         "Existen ecuaciones contradictorias (ej: 0 = valor no cero)";
     } else if (matrixRank === variables) {
       explanation += "\n→ Sistema COMPATIBLE DETERMINADO (solución única)\n";
-      explanation +=
-        "El número de variables independientes igual al número de ecuaciones";
+      if (this.isHomogeneous) {
+        explanation += "Sistema homogéneo con solución trivial (todos los valores son cero)";
+      } else {
+        explanation +=
+          "El número de variables independientes igual al número de ecuaciones";
+      }
     } else {
       explanation +=
         "\n→ Sistema COMPATIBLE INDETERMINADO (infinitas soluciones)\n";
+      if (this.isHomogeneous) {
+        explanation += "Sistema homogéneo con infinitas soluciones (incluye la solución trivial)\n";
+      }
       explanation += `Variables libres: ${variables - matrixRank}`;
     }
 
@@ -217,8 +238,8 @@ export class EnhancedSolver {
 
     return {
       type: "unique",
-      // Usar función flecha aquí
       solution: solution.map((val) => this.round(val)),
+      isHomogeneous: this.isHomogeneous,
       steps: this.steps,
       explanation,
     };
@@ -256,15 +277,22 @@ export class EnhancedSolver {
       parametricSolution.push(`x${free + 1} = t${j}`);
     });
 
+    let homogeneousExplanation = "";
+    if (this.isHomogeneous) {
+      homogeneousExplanation = "\nSistema homogéneo: incluye la solución trivial (todos ceros) cuando los parámetros son cero";
+    }
+
     return {
       type: "infinite",
       solution: parametricSolution,
       pivotVars: pivotCols,
       freeVars: freeCols,
+      isHomogeneous: this.isHomogeneous,
       steps: this.steps,
       explanation:
         explanation +
-        `\nVariables libres: ${freeCols.map((c) => `x${c + 1}`).join(", ")}`,
+        `\nVariables libres: ${freeCols.map((c) => `x${c + 1}`).join(", ")}` +
+        homogeneousExplanation,
     };
   }
 }

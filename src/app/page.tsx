@@ -3,13 +3,13 @@ import { useState, useEffect } from "react"
 import { EnhancedSolver, type Solution as SolverSolution } from "./lib/matrixSolver"
 import MatrixInput from "./components/MatrixInput"
 import { SolutionSteps } from "./components/SolutionSteps"
-import { MoonIcon, SunIcon } from "lucide-react"
-import { useDarkMode } from "./hooks/useDarkMode"
+//import { MoonIcon, SunIcon } from "lucide-react"
+//import { useDarkMode } from "./hooks/useDarkMode"
 
 type Solution = SolverSolution
 
 export default function EquationSolver() {
-  const { darkMode, toggleDarkMode } = useDarkMode()
+  //const { darkMode, toggleDarkMode } = useDarkMode()
   const [rows, setRows] = useState(2)
   const [cols, setCols] = useState(2)
   const [matrix, setMatrix] = useState<string[][]>(
@@ -52,7 +52,7 @@ export default function EquationSolver() {
     >
       <div className="max-w-6xl mx-auto">
         {/* Header with theme toggle */}
-        <div className="flex justify-between items-center mb-8">
+        {/*<div className="flex justify-between items-center mb-8">
           <div className="flex-1"></div>
           <button
             onClick={toggleDarkMode}
@@ -66,7 +66,7 @@ export default function EquationSolver() {
               <MoonIcon className="h-5 w-5 text-blue-600" />
             )}
           </button>
-        </div>
+        </div>*/}
 
         {/* Main content card */}
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden transition-all duration-300">
@@ -144,7 +144,7 @@ export default function EquationSolver() {
                   <span className="inline-block w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 mr-2 flex items-center justify-center text-center">
                     A
                   </span>
-                  Matriz de Coeficientes
+                  Coeficientes de la Matriz
                 </h2>
                 <div className="bg-blue-50 dark:bg-gray-700/50 rounded-xl p-4 border border-blue-100 dark:border-gray-600 transition-all duration-300">
                   <MatrixInput rows={rows} cols={cols} matrix={matrix} onChange={setMatrix} />
@@ -326,7 +326,7 @@ export default function EquationSolver() {
 
         {/* Footer */}
         <div className="mt-8 text-center text-gray-500 dark:text-gray-400 text-sm">
-          <p>Solucionador de Sistemas Lineales © {new Date().getFullYear()}</p>
+          <p>Para el 10 en Algebra Lineal {new Date().getFullYear()}</p>
         </div>
       </div>
     </div>

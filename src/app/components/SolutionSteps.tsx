@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef, useEffect } from "react"
 
 type Step = {
   operation: string
@@ -12,6 +12,30 @@ type Step = {
 export const SolutionSteps = ({ steps }: { steps: Step[] }) => {
   const [expanded, setExpanded] = useState(false)
   const [activeStep, setActiveStep] = useState<number | null>(null)
+  
+  // Referencias para los elementos de cada paso
+  const stepRefs = useRef<(HTMLDivElement | null)[]>([])
+  
+  // Inicializar las referencias del array
+  useEffect(() => {
+    stepRefs.current = stepRefs.current.slice(0, steps.length)
+  }, [steps.length])
+  
+  // Función para manejar el clic en un botón de paso
+  const handleStepClick = (index: number) => {
+    // Cambiar el paso activo
+    setActiveStep(activeStep === index ? null : index)
+    
+    // Si el paso ya está expandido, desplazar hacia el elemento
+    if (expanded && stepRefs.current[index]) {
+      setTimeout(() => {
+        stepRefs.current[index]?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start'
+        })
+      }, 100) // Pequeño retraso para permitir cualquier renderizado
+    }
+  }
 
   return (
     <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-6 border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-200 transition-all duration-300">
@@ -37,7 +61,7 @@ export const SolutionSteps = ({ steps }: { steps: Step[] }) => {
               {steps.map((step, index) => (
                 <button
                   key={index}
-                  onClick={() => setActiveStep(activeStep === index ? null : index)}
+                  onClick={() => handleStepClick(index)}
                   className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all duration-200 ${
                     activeStep === index
                       ? "bg-blue-600 text-white shadow-md"
@@ -53,9 +77,11 @@ export const SolutionSteps = ({ steps }: { steps: Step[] }) => {
           {steps.map((step, index) => (
             <div
               key={index}
+              ref={el => { stepRefs.current[index] = el }}
               className={`bg-white dark:bg-gray-700 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-600 transition-all duration-300 ${
                 activeStep === null || activeStep === index ? "opacity-100" : "opacity-50"
               }`}
+              id={`step-${index}`}
             >
               <div className="mb-4">
                 <div className="flex items-center justify-between">
@@ -126,4 +152,3 @@ export const SolutionSteps = ({ steps }: { steps: Step[] }) => {
     return "Operación estándar de eliminación gaussiana."
   }
 }
-
