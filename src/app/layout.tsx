@@ -6,7 +6,7 @@ import { Providers } from "./providers";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata = {
-  title: "Solucionador de Matrices Avanzado",
+  title: "Solucionador de Matrices",
   description:
     "Aplicación para resolver sistemas de ecuaciones lineales de cualquier tamaño",
 };

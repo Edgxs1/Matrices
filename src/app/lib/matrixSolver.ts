@@ -10,289 +10,231 @@ export type Solution = {
   solution?: number[] | string[];
   pivotVars?: number[];
   freeVars?: number[];
-  isHomogeneous?: boolean; // Nueva propiedad para sistemas homogéneos
+  isHomogeneous?: boolean;
   steps: Step[];
   explanation: string;
 };
 
 export class EnhancedSolver {
-  private steps: Step[] = [];
-  private augmented: number[][];
+  private pasos: Step[] = [];
+  private matrizAumentada: number[][];
   private precision: number;
   private epsilon: number;
-  private isHomogeneous: boolean = true; // Asumimos que es homogéneo hasta comprobar lo contrario
+  private esHomogeneo: boolean = true;
 
   constructor(matrix: Matrix, vector: number[]) {
-    // Validación básica de entrada
     if (matrix.length !== vector.length) {
       throw new Error("El número de filas de la matriz y vector no coinciden");
     }
 
-    this.augmented = matrix.map((row, i) => [...row, vector[i]]);
+    this.matrizAumentada = matrix.map((fila, i) => [...fila, vector[i]]);
     this.precision = 4;
     this.epsilon = 1e-10;
-    
-    // Comprobamos si es un sistema homogéneo (todos los términos independientes son cero)
-    this.isHomogeneous = vector.every(val => this.isZero(val));
+    this.esHomogeneo = vector.every(val => this.esCero(val));
   }
 
-  private round(value: number): number {
-    return parseFloat(value.toFixed(this.precision));
+  private round(valor: number): number {
+    return parseFloat(valor.toFixed(this.precision));
   }
 
-  private isZero(value: number): boolean {
-    return Math.abs(value) < this.epsilon;
+  private esCero(valor: number): boolean {
+    return Math.abs(valor) < this.epsilon;
   }
 
-  private recordStep(operation: string, description: string) {
-    // Usar función flecha aquí para mantener el contexto 'this'
-    const currentMatrix = this.augmented.map((row) =>
-      row.slice(0, -1).map((val) => this.round(val))
+  private recordStep(operacion: string, descripcion: string) {
+    const matrizActual = this.matrizAumentada.map((fila) =>
+      fila.slice(0, -1).map((val) => this.round(val))
     );
-    const currentVector = this.augmented.map((row) =>
-      this.round(row[row.length - 1])
+    const vectorActual = this.matrizAumentada.map((fila) =>
+      this.round(fila[fila.length - 1])
     );
 
-    this.steps.push({
-      matrix: currentMatrix.map((row) => [...row]),
-      vector: [...currentVector],
-      operation,
-      description,
+    this.pasos.push({
+      matrix: matrizActual.map((fila) => [...fila]),
+      vector: [...vectorActual],
+      operation: operacion,
+      description: descripcion,
     });
   }
 
-  private getRank(matrix: Matrix): number {
-    let rank = 0;
-    const rows = matrix.length;
-    const cols = matrix[0]?.length || 0;
-
-    for (let i = 0; i < rows; i++) {
-      let pivot = -1;
-      for (let j = 0; j < cols; j++) {
-        if (!this.isZero(matrix[i][j])) {
-          pivot = j;
-          break;
-        }
-      }
-      if (pivot !== -1) rank++;
-    }
-    return rank;
-  }
-
   public solve(): Solution {
-    const rows = this.augmented.length;
-    const cols = this.augmented[0]?.length - 1 || 0;
-    let pivotRow = 0;
+    const filas = this.matrizAumentada.length;
+    const columnas = this.matrizAumentada[0]?.length - 1 || 0;
+    let filaPivote = 0;
 
-    for (let col = 0; col < cols && pivotRow < rows; col++) {
-      // Pivoteo parcial
-      let maxRow = pivotRow;
-      for (let i = pivotRow; i < rows; i++) {
-        if (
-          Math.abs(this.augmented[i][col]) >
-          Math.abs(this.augmented[maxRow][col])
-        ) {
-          maxRow = i;
+    // Eliminación Gaussiana
+    for (let col = 0; col < columnas && filaPivote < filas; col++) {
+      let filaMaxima = filaPivote;
+      for (let i = filaPivote; i < filas; i++) {
+        if (Math.abs(this.matrizAumentada[i][col]) > Math.abs(this.matrizAumentada[filaMaxima][col])) {
+          filaMaxima = i;
         }
       }
 
-      if (this.isZero(this.augmented[maxRow][col])) continue;
+      if (this.esCero(this.matrizAumentada[filaMaxima][col])) continue;
 
-      if (maxRow !== pivotRow) {
-        [this.augmented[pivotRow], this.augmented[maxRow]] = [
-          this.augmented[maxRow],
-          this.augmented[pivotRow],
+      if (filaMaxima !== filaPivote) {
+        [this.matrizAumentada[filaPivote], this.matrizAumentada[filaMaxima]] = [
+          this.matrizAumentada[filaMaxima],
+          this.matrizAumentada[filaPivote],
         ];
         this.recordStep(
           "Pivoteo parcial",
-          `Intercambio fila ${pivotRow + 1} con fila ${
-            maxRow + 1
-          } para obtener mejor pivote`
+          `Intercambio fila ${filaPivote + 1} con fila ${filaMaxima + 1}`
         );
       }
 
-      // Normalizar fila pivote
-      const pivotValue = this.augmented[pivotRow][col];
-      for (let j = col; j <= cols; j++) {
-        this.augmented[pivotRow][j] = this.round(
-          this.augmented[pivotRow][j] / pivotValue
+      const valorPivote = this.matrizAumentada[filaPivote][col];
+      for (let j = col; j <= columnas; j++) {
+        this.matrizAumentada[filaPivote][j] = this.round(
+          this.matrizAumentada[filaPivote][j] / valorPivote
         );
       }
       this.recordStep(
         "Normalización",
-        `Fila ${pivotRow + 1} dividida por ${this.round(
-          pivotValue
-        )} para pivote 1`
+        `Fila ${filaPivote + 1} dividida por ${this.round(valorPivote)}`
       );
 
-      // Eliminación hacia adelante y atrás
-      for (let i = 0; i < rows; i++) {
-        if (i !== pivotRow && !this.isZero(this.augmented[i][col])) {
-          const factor = this.augmented[i][col];
-          for (let j = col; j <= cols; j++) {
-            this.augmented[i][j] = this.round(
-              this.augmented[i][j] - factor * this.augmented[pivotRow][j]
+      for (let i = 0; i < filas; i++) {
+        if (i !== filaPivote && !this.esCero(this.matrizAumentada[i][col])) {
+          const factor = this.matrizAumentada[i][col];
+          for (let j = col; j <= columnas; j++) {
+            this.matrizAumentada[i][j] = this.round(
+              this.matrizAumentada[i][j] - factor * this.matrizAumentada[filaPivote][j]
             );
           }
           this.recordStep(
             "Eliminación",
-            `Fila ${i + 1} -= ${this.round(factor)} × Fila ${pivotRow + 1}`
+            `Fila ${i + 1} -= ${this.round(factor)} × Fila ${filaPivote + 1}`
           );
         }
       }
-      pivotRow++;
+      filaPivote++;
     }
 
-    const matrixRank = this.getRank(
-      this.augmented.map((row) => row.slice(0, -1))
-    );
-    const augmentedRank = this.getRank(this.augmented);
-    const explanation = this.generateExplanation(
-      matrixRank,
-      augmentedRank,
-      cols
-    );
+    // Detectar inconsistencias
+    let tieneInconsistencia = false;
+    for (const fila of this.matrizAumentada) {
+      const coeficientes = fila.slice(0, -1);
+      const constante = fila[fila.length - 1];
+      if (coeficientes.every(c => this.esCero(c)) && !this.esCero(constante)) {
+        tieneInconsistencia = true;
+        break;
+      }
+    }
 
-    if (matrixRank < augmentedRank) {
+    if (tieneInconsistencia) {
       return {
         type: "no-solution",
-        isHomogeneous: this.isHomogeneous,
-        steps: this.steps,
-        explanation,
+        isHomogeneous: this.esHomogeneo,
+        steps: this.pasos,
+        explanation: this.generarExplicacionSinSolucion(),
       };
     }
 
-    if (matrixRank < cols) {
-      return this.handleInfiniteSolutions(matrixRank, explanation);
+    // Contar pivotes
+    let pivotes = 0;
+    for (const fila of this.matrizAumentada) {
+      if (fila.slice(0, -1).some(c => !this.esCero(c))) pivotes++;
     }
 
-    if (matrixRank === cols && matrixRank === rows) {
-      return this.handleUniqueSolution(explanation);
-    }
+    // Generar explicación base
+    let explicacion = `Sistema de ${filas} ecuaciones con ${columnas} variables\n`;
+    explicacion += this.esHomogeneo ? "- Sistema HOMOGÉNEO\n" : "- Sistema NO HOMOGÉNEO\n";
 
-    return {
-      type: "singular",
-      isHomogeneous: this.isHomogeneous,
-      steps: this.steps,
-      explanation: "Matriz de coeficientes singular (no invertible)",
-    };
+    if (pivotes === columnas) {
+      explicacion += "\n→ Sistema COMPATIBLE DETERMINADO (solución única)\n";
+      explicacion += this.esHomogeneo
+        ? "Solución trivial única (todas las variables son cero)."
+        : "Todas las variables tienen pivote.";
+      return this.manejarSolucionUnica(explicacion);
+    } else {
+      explicacion += "\n→ Sistema COMPATIBLE INDETERMINADO (infinitas soluciones)\n";
+      explicacion += `Variables libres: ${columnas - pivotes}`;
+      if (this.esHomogeneo) {
+        explicacion += "\nSistema homogéneo con soluciones no triviales.";
+      }
+      return this.manejarInfinitasSoluciones(explicacion);
+    }
   }
 
-  private generateExplanation(
-    matrixRank: number,
-    augmentedRank: number,
-    cols: number
-  ): string {
-    const equations = this.augmented.length;
-    const variables = cols;
-
-    let explanation = `Sistema de ${equations} ecuaciones con ${variables} variables\n`;
-    explanation += `- Rango matriz coeficientes: ${matrixRank}\n`;
-    explanation += `- Rango matriz aumentada: ${augmentedRank}\n`;
-    
-    // Agregar información sobre si el sistema es homogéneo
-    if (this.isHomogeneous) {
-      explanation += `- Sistema HOMOGÉNEO (todos los términos independientes son cero)\n`;
-    } else {
-      explanation += `- Sistema NO HOMOGÉNEO\n`;
-    }
-
-    if (matrixRank < augmentedRank) {
-      explanation += "\n→ Sistema INCOMPATIBLE (sin solución)\n";
-      explanation +=
-        "Existen ecuaciones contradictorias (ej: 0 = valor no cero)";
-    } else if (matrixRank === variables) {
-      explanation += "\n→ Sistema COMPATIBLE DETERMINADO (solución única)\n";
-      if (this.isHomogeneous) {
-        explanation += "Sistema homogéneo con solución trivial (todos los valores son cero)";
-      } else {
-        explanation +=
-          "El número de variables independientes igual al número de ecuaciones";
-      }
-    } else {
-      explanation +=
-        "\n→ Sistema COMPATIBLE INDETERMINADO (infinitas soluciones)\n";
-      if (this.isHomogeneous) {
-        explanation += "Sistema homogéneo con infinitas soluciones (incluye la solución trivial)\n";
-      }
-      explanation += `Variables libres: ${variables - matrixRank}`;
-    }
-
-    return explanation;
+  private generarExplicacionSinSolucion(): string {
+    let explicacion = `Sistema de ${this.matrizAumentada.length} ecuaciones con ${
+      this.matrizAumentada[0]?.length - 1
+    } variables\n`;
+    explicacion += this.esHomogeneo
+      ? "- Sistema HOMOGÉNEO (imposible tener inconsistencia)\n"
+      : "- Sistema NO HOMOGÉNEO\n";
+    explicacion += "\n→ Sistema INCOMPATIBLE (sin solución)\n";
+    explicacion += "Existe una ecuación inconsistente (ej: 0 = valor no cero).";
+    return explicacion;
   }
 
-  private handleUniqueSolution(explanation: string): Solution {
-    const cols = this.augmented[0].length - 1;
-    const solution: number[] = new Array(cols).fill(0);
+  private manejarSolucionUnica(explicacion: string): Solution {
+    const columnas = this.matrizAumentada[0].length - 1;
+    const solucion: number[] = new Array(columnas).fill(0);
 
-    for (let i = this.augmented.length - 1; i >= 0; i--) {
-      const pivotCol = this.augmented[i].findIndex((val) => !this.isZero(val));
-      if (pivotCol === -1 || pivotCol === cols) continue;
+    for (let i = this.matrizAumentada.length - 1; i >= 0; i--) {
+      const columnaPivote = this.matrizAumentada[i].findIndex((val) => !this.esCero(val));
+      if (columnaPivote === -1 || columnaPivote === columnas) continue;
 
-      let sum = 0;
-      for (let j = pivotCol + 1; j < cols; j++) {
-        sum += this.augmented[i][j] * solution[j];
+      let suma = 0;
+      for (let j = columnaPivote + 1; j < columnas; j++) {
+        suma += this.matrizAumentada[i][j] * solucion[j];
       }
-      solution[pivotCol] = this.round(this.augmented[i][cols] - sum);
+      solucion[columnaPivote] = this.round(this.matrizAumentada[i][columnas] - suma);
     }
 
     return {
       type: "unique",
-      solution: solution.map((val) => this.round(val)),
-      isHomogeneous: this.isHomogeneous,
-      steps: this.steps,
-      explanation,
+      solution: solucion.map((val) => this.round(val)),
+      isHomogeneous: this.esHomogeneo,
+      steps: this.pasos,
+      explanation: explicacion,
     };
   }
 
-  private handleInfiniteSolutions(rank: number, explanation: string): Solution {
-    const cols = this.augmented[0].length - 1;
-    const pivotCols: number[] = [];
-    const freeCols: number[] = [];
+  private manejarInfinitasSoluciones(explicacion: string): Solution {
+    const columnas = this.matrizAumentada[0].length - 1;
+    const columnasConPivote: number[] = [];
+    const columnasLibres: number[] = [];
+    let filaActualPivote = 0;
 
-    for (let col = 0, row = 0; col < cols; col++) {
+    for (let col = 0; col < columnas; col++) {
       if (
-        row < this.augmented.length &&
-        !this.isZero(this.augmented[row][col])
+        filaActualPivote < this.matrizAumentada.length &&
+        !this.esCero(this.matrizAumentada[filaActualPivote][col])
       ) {
-        pivotCols.push(col);
-        row++;
+        columnasConPivote.push(col);
+        filaActualPivote++;
       } else {
-        freeCols.push(col);
+        columnasLibres.push(col);
       }
     }
 
-    const parametricSolution = pivotCols.map((pivot, i) => {
-      let expr = `${this.round(this.augmented[i][cols])}`;
-      freeCols.forEach((free, j) => {
-        const coeff = this.round(-this.augmented[i][free]);
-        if (!this.isZero(coeff)) {
-          expr += ` + (${coeff})·t${j}`;
+    const solucionParametrica = columnasConPivote.map((pivote, i) => {
+      let expresion = `${this.round(this.matrizAumentada[i][columnas])}`;
+      columnasLibres.forEach((libre, j) => {
+        const coef = this.round(-this.matrizAumentada[i][libre]);
+        if (!this.esCero(coef)) {
+          expresion += ` + (${coef})·t${j}`;
         }
       });
-      return `x${pivot + 1} = ${expr}`;
+      return `x${pivote + 1} = ${expresion}`;
     });
 
-    freeCols.forEach((free, j) => {
-      parametricSolution.push(`x${free + 1} = t${j}`);
+    columnasLibres.forEach((libre, j) => {
+      solucionParametrica.push(`x${libre + 1} = t${j}`);
     });
-
-    let homogeneousExplanation = "";
-    if (this.isHomogeneous) {
-      homogeneousExplanation = "\nSistema homogéneo: incluye la solución trivial (todos ceros) cuando los parámetros son cero";
-    }
 
     return {
       type: "infinite",
-      solution: parametricSolution,
-      pivotVars: pivotCols,
-      freeVars: freeCols,
-      isHomogeneous: this.isHomogeneous,
-      steps: this.steps,
-      explanation:
-        explanation +
-        `\nVariables libres: ${freeCols.map((c) => `x${c + 1}`).join(", ")}` +
-        homogeneousExplanation,
+      solution: solucionParametrica,
+      pivotVars: columnasConPivote,
+      freeVars: columnasLibres,
+      isHomogeneous: this.esHomogeneo,
+      steps: this.pasos,
+      explanation: explicacion + `\nVariables libres: ${columnasLibres.map(c => `x${c + 1}`).join(", ")}`,
     };
   }
 }
